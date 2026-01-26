@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProEdit - Online Word Processor</title>
+    
+    <!-- PDF Generation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg-app: #f3f4f6;
+            --bg-toolbar: #ffffff;
+            --border: #e5e7eb;
+            --text: #1f2937;
+            --page-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Toolbar --- */
+        #toolbar-container {
+            background: var(--bg-toolbar);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            padding-right: 12px;
+            margin-right: 12px;
+            border-right: 1px solid var(--border);
+            align-items: center;
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+            margin-left: auto; /* Push export to right */
+        }
+
+        button {
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            padding: 6px 10px;
+            cursor: pointer;
+            color: #4b5563;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:hover {
+            background-color: #f3f4f6;
+            color: var(--primary);
+        }
+
+        button.active {
+            background-color: #e0e7ff;
+            color: var(--primary);
+            border-color: #c7d2fe;
+        }
+
+        select {
+            padding: 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: #4b5563;
+            background: white;
+            cursor: pointer;
+        }
+
+        input[type="color"] {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        /* --- Editor Area --- */
+        #editor-workspace {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #document-page {
+            background: white;
+            width: 210mm; /* A4 Width */
+            min-height: 297mm; /* A4 Height */
+            padding: 25.4mm; /* Standard 1 inch margins */
+            box-shadow: var(--page-shadow);
+            margin-bottom: 40px;
+            cursor: text;
+            font-size: 11pt;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        /* Print Specific Styles */
+        @media print {
+            body {
+                background: white;
+                height: auto;
+                overflow: visible;
+            }
+            #toolbar-container, #status-bar {
+                display: none;
+            }
+            #editor-workspace {
+                padding: 0;
+                overflow: visible;
+                display: block;
+            }
+            #document-page {
+                width: 100%;
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+                min-height: auto;
+            }
+        }
+
+        /* Document internal styles */
+        #document-page img {
+            max-width: 100%;
+            height: auto;
+            resize: both;
+            border: 1px solid transparent;
+        }
+        #document-page img:hover {
+            border: 1px dashed #ccc;
+        }
+        
+        blockquote {
+            border-left: 3px solid #ccc;
+            margin-left: 0;
+            padding-left: 1em;
+            color: #666;
+        }
+
+        /* Hanging Indent Class */
+        .hanging-indent {
+            padding-left: 2em;
+            text-indent: -2em;
+        }
+
+        /* --- Status Bar --- */
+        #status-bar {
+            background: var(--bg-toolbar);
+            border-top: 1px solid var(--border);
+            padding: 5px 20px;
+            font-size: 12px;
+            color: #6b7280;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* --- Modal (for Image URL) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal h3 { margin-top: 0; }
+        .modal input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: 40px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div id="toolbar-container">
+        
+        <div class="toolbar-group">
+            <select onchange="formatDoc('formatBlock', this.value); this.value='Normal';">
+                <option value="" selected disabled>Style</option>
+                <option value="p">Normal</option>
+                <option value="h1">Heading 1</option>
+                <option value="h2">Heading 2</option>
+                <option value="h3">Heading 3</option>
+            </select>
+            <select onchange="formatDoc('fontName', this.value); this.value='Font';">
+                <option value="" selected disabled>Font</option>
+                <option value="Arial">Arial</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Segoe UI">Segoe UI</option>
+            </select>
+            <select onchange="formatDoc('fontSize', this.value); this.value='Size';">
+                <option value="" selected disabled>Size</option>
+                <option value="1">Small</option>
+                <option value="3">Normal</option>
+                <option value="5">Large</option>
+                <option value="7">Huge</option>
+            </select>
+        </div>
+
+        <div class="toolbar-group">
+            <button onclick="formatDoc('bold')" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button>
+            <button onclick="formatDoc('italic')" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button>
+            <button onclick="formatDoc('underline')" title="Underline (Ctrl+U)"><i class="fas fa-underline"></i></button>
+            <button onclick="formatDoc('strikeThrough')" title="Strikethrough"><i class="fas fa-strikethrough"></i></button>
+            <input type="color" onchange="formatDoc('foreColor', this.value)" title="Text Color">
+        </div>
+
+        <div class="toolbar-group">
+            <button onclick="formatDoc('justifyLeft')" title="Align Left"><i class="fas fa-align-left"></i></button>
+            <button onclick="formatDoc('justifyCenter')" title="Align Center"><i class="fas fa-align-center"></i></button>
+            <button onclick="formatDoc('justifyRight')" title="Align Right"><i class="fas fa-align-right"></i></button>
+            <button onclick="formatDoc('justifyFull')" title="Justify"><i class="fas fa-align-justify"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+            <button onclick="formatDoc('insertUnorderedList')" title="Bullet List"><i class="fas fa-list-ul"></i></button>
+            <button onclick="formatDoc('insertOrderedList')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
+            <button onclick="formatDoc('outdent')" title="Decrease Indent"><i class="fas fa-outdent"></i></button>
+            <button onclick="formatDoc('indent')" title="Increase Indent"><i class="fas fa-indent"></i></button>
+            <button onclick="toggleHangingIndent()" title="Hanging Indent" style="position: relative;">
+                <i class="fas fa-paragraph"></i>
+                <span style="font-size:8px; position:absolute; bottom:2px; right:2px;">HANG</span>
+            </button>
+        </div>
+
+        <div class="toolbar-group">
+            <button onclick="showImageModal()" title="Insert Image"><i class="fas fa-image"></i></button>
+            <button onclick="addLink()" title="Insert Link"><i class="fas fa-link"></i></button>
+            <button onclick="formatDoc('removeFormat')" title="Clear Formatting"><i class="fas fa-eraser"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+            <button onclick="exportToPDF()" class="btn-primary" style="background-color: #2563eb; color: white;">
+                <i class="fas fa-file-pdf" style="margin-right: 6px;"></i> Export PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Editor Workspace -->
+    <div id="editor-workspace" onclick="focusEditor(event)">
+        <div id="document-page" contenteditable="true" spellcheck="false">
+            <p><b>Welcome to ProEdit!</b></p>
+            <p>Start typing your document here. This is a fully functional editor.</p>
+            <p>Features include:</p>
+            <ul>
+                <li>Rich text formatting (Bold, Italic, Fonts)</li>
+                <li>Alignment and lists</li>
+                <li><span style="color: red;">Color formatting</span></li>
+                <li>Images and links</li>
+            </ul>
+            <p class="hanging-indent"><b>Hanging Indent:</b> This paragraph demonstrates a hanging indent. Notice how the first line starts at the margin, but all subsequent lines in the paragraph are indented. This is commonly used in bibliographies and reference lists.</p>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar">
+        <span id="word-count">Words: 0 | Characters: 0</span>
+        <span id="save-status">Saved</span>
+    </div>
+
+    <!-- Modals -->
+    <div id="image-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Insert Image</h3>
+            <input type="text" id="img-url" placeholder="Paste image URL here...">
+            <div class="modal-buttons">
+                <button onclick="closeModal('image-modal')">Cancel</button>
+                <button class="btn-primary" onclick="insertImage()">Insert</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast">Message</div>
+
+    <script>
+        const editor = document.getElementById('document-page');
+        const wordCountDisplay = document.getElementById('word-count');
+        const saveStatusDisplay = document.getElementById('save-status');
+
+        // --- Core Formatting ---
+        function formatDoc(cmd, value = null) {
+            if (value) {
+                document.execCommand(cmd, false, value);
+            } else {
+                document.execCommand(cmd);
+            }
+            editor.focus();
+            updateStats();
+        }
+
+        function addLink() {
+            const url = prompt('Enter the URL');
+            if (url) {
+                document.execCommand('createLink', false, url);
+            }
+        }
+
+        // --- Hanging Indent Logic ---
+        function toggleHangingIndent() {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+
+            let node = selection.anchorNode;
+            
+            // Traverse up to find the block element (P, DIV, LI)
+            while (node && node !== editor && node.nodeName !== 'P' && node.nodeName !== 'DIV' && node.nodeName !== 'LI') {
+                node = node.parentNode;
+            }
+
+            if (node && node !== editor) {
+                if (node.classList.contains('hanging-indent')) {
+                    node.classList.remove('hanging-indent');
+                } else {
+                    node.classList.add('hanging-indent');
+                }
+            } else {
+                // If we are on a text node directly inside editor or empty line, wrap it
+                document.execCommand('formatBlock', false, 'p');
+                setTimeout(toggleHangingIndent, 0); // Retry after wrapping
+            }
+            updateStats();
+        }
+
+        // --- Image Handling ---
+        function showImageModal() {
+            document.getElementById('image-modal').style.display = 'flex';
+            document.getElementById('img-url').focus();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function insertImage() {
+            const url = document.getElementById('img-url').value;
+            if (url) {
+                document.execCommand('insertImage', false, url);
+                closeModal('image-modal');
+                document.getElementById('img-url').value = '';
+            }
+        }
+
+        // --- Stats & Autosave ---
+        editor.addEventListener('input', () => {
+            updateStats();
+            debouncedSave();
+        });
+
+        // Load saved content
+        window.addEventListener('load', () => {
+            const savedContent = localStorage.getItem('proedit-content');
+            if (savedContent) {
+                editor.innerHTML = savedContent;
+            }
+            updateStats();
+        });
+
+        function updateStats() {
+            const text = editor.innerText || '';
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const chars = text.length;
+            wordCountDisplay.textContent = `Words: ${words} | Characters: ${chars}`;
+            saveStatusDisplay.textContent = 'Unsaved changes...';
+        }
+
+        let saveTimeout;
+        function debouncedSave() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                localStorage.setItem('proedit-content', editor.innerHTML);
+                saveStatusDisplay.textContent = 'Saved to local storage';
+            }, 1000);
+        }
+
+        function focusEditor(e) {
+            if (e.target.id === 'editor-workspace') {
+                editor.focus();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.opacity = 1;
+            setTimeout(() => toast.style.opacity = 0, 3000);
+        }
+
+        // --- PDF Export ---
+        function exportToPDF() {
+            showToast("Generating PDF...");
+            
+            const element = document.getElementById('document-page');
+            
+            // Options for html2pdf
+            const opt = {
+                margin:       [0.5, 0.5, 0.5, 0.5], // inches
+                filename:     'document.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, // scale 2 for better resolution
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            // Promise based usage
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast("PDF Downloaded!");
+            }).catch(err => {
+                console.error(err);
+                showToast("Error generating PDF");
+            });
+        }
+
+        // Keyboard Shortcuts
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+            }
+        });
+
+    </script>
+</body>
+</html>
