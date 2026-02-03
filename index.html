@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumina Docs Professional</title>
+    <title>Ashton Docs Professional</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -47,6 +47,7 @@
             flex-direction: column;
             align-items: center;
             padding-bottom: 50px;
+            min-height: 100%; /* Ensure click area covers height */
         }
 
         .page {
@@ -59,15 +60,7 @@
             overflow: hidden; /* Content flows to next page via JS */
             outline: none;
             position: relative;
-        }
-
-        /* Dark mode for pages - keep them white for contrast like Word, or dim them? 
-           User usually wants "paper" to look like paper. keeping white. */
-        
-        /* Focus styles for the active page */
-        .page:focus {
-            /* Optional: subtle ring to show which page is active */
-            /* ring: 2px solid blue; */
+            cursor: text;
         }
 
         /* --- PRINT ENGINE --- */
@@ -107,7 +100,6 @@
                 height: 297mm !important;
             }
             
-            /* Hide the last empty page if it's empty? */
             .page:empty {
                 display: none;
             }
@@ -227,7 +219,11 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <button id="theme-toggle-dash" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"><i data-lucide="moon" class="h-5 w-5 dark:hidden"></i><i data-lucide="sun" class="h-5 w-5 hidden dark:block"></i></button>
-                    <button id="sign-out-btn" class="text-sm text-red-500 font-medium hover:underline">Sign Out</button>
+                    <div class="flex flex-col items-end">
+                        <span id="user-email-display" class="text-sm font-medium"></span>
+                        <button id="sign-out-btn" class="text-xs text-red-500 hover:underline">Sign Out</button>
+                    </div>
+                    <div id="user-avatar" class="h-9 w-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">U</div>
                 </div>
             </div>
             <div class="p-8 max-w-7xl mx-auto w-full">
@@ -238,6 +234,7 @@
                 </div>
                 <h2 class="text-lg font-semibold mb-6">Recent Documents</h2>
                 <div id="docs-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"></div>
+                <div id="db-error-msg" class="hidden text-red-500 text-sm mt-4">Database unavailable (Test Mode / Invalid Key)</div>
             </div>
         </div>
 
@@ -329,7 +326,6 @@
         let zoom = 100;
         let saveTimeout = null;
 
-        // --- DOM Elements ---
         const pagesContainer = document.getElementById('pages-container');
         const screens = {
             loading: document.getElementById('loading-screen'),
@@ -338,7 +334,6 @@
             editor: document.getElementById('editor-screen')
         };
 
-        // --- Init ---
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
@@ -354,13 +349,15 @@
             lucide.createIcons();
         }
 
-        // --- Auth Logic (Fixed) ---
+        // --- AUTH LOGIC ---
         let isRegistering = false;
-        
+
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             screens.loading.classList.add('hidden');
             if (user) {
+                document.getElementById('user-email-display').textContent = user.email;
+                document.getElementById('user-avatar').textContent = user.email[0].toUpperCase();
                 loadDashboard();
                 showScreen('dashboard');
             } else {
@@ -373,11 +370,11 @@
             e.preventDefault();
             isRegistering = !isRegistering;
             document.getElementById('auth-title').textContent = isRegistering ? 'Create Account' : 'Welcome Back';
-            document.getElementById('auth-subtitle').textContent = isRegistering ? 'Get started with Lumina Docs for free.' : 'Enter your details to access your workspace.';
+            document.getElementById('auth-subtitle').textContent = isRegistering ? 'Get started with Ashton Docs for free.' : 'Enter your details to access your workspace.';
             document.getElementById('auth-submit-btn').textContent = isRegistering ? 'Sign Up' : 'Sign In';
             e.target.textContent = isRegistering ? 'Sign in' : 'Sign up';
             document.getElementById('auth-footer-text').textContent = isRegistering ? 'Already have an account?' : "Don't have an account?";
-            document.getElementById('auth-error').classList.add('hidden'); // clear errors
+            document.getElementById('auth-error').classList.add('hidden'); 
         });
 
         // Submit Handler
@@ -420,90 +417,102 @@
         // --- Dashboard ---
         function loadDashboard() {
             const grid = document.getElementById('docs-grid');
-            const q = query(collection(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents"), orderBy("updatedAt", "desc"));
+            const dbErrorMsg = document.getElementById('db-error-msg');
             
-            onSnapshot(q, (snapshot) => {
-                grid.innerHTML = '';
-                snapshot.forEach(docSnap => {
-                    const doc = docSnap.data();
-                    const el = document.createElement('div');
-                    el.className = 'group cursor-pointer';
-                    el.innerHTML = `
-                        <div class="h-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col overflow-hidden relative">
-                            <div class="flex-1 p-4 opacity-50 space-y-2">
-                                <div class="h-2 bg-gray-300 rounded w-3/4"></div><div class="h-2 bg-gray-300 rounded w-full"></div>
-                                <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-gray-800 to-transparent"></div>
+            try {
+                const q = query(collection(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents"), orderBy("updatedAt", "desc"));
+                
+                onSnapshot(q, (snapshot) => {
+                    grid.innerHTML = '';
+                    dbErrorMsg.classList.add('hidden');
+                    
+                    snapshot.forEach(docSnap => {
+                        const doc = docSnap.data();
+                        const el = document.createElement('div');
+                        el.className = 'group cursor-pointer';
+                        el.innerHTML = `
+                            <div class="h-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col overflow-hidden relative">
+                                <div class="flex-1 p-4 opacity-50 space-y-2">
+                                    <div class="h-2 bg-gray-300 rounded w-3/4"></div><div class="h-2 bg-gray-300 rounded w-full"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-gray-800 to-transparent"></div>
+                                </div>
+                                <div class="h-10 bg-gray-50 dark:bg-gray-700 flex items-center justify-between px-3">
+                                    <i data-lucide="file-text" class="h-4 w-4 text-blue-500"></i>
+                                    <button class="del-btn p-1 text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+                                </div>
                             </div>
-                            <div class="h-10 bg-gray-50 dark:bg-gray-700 flex items-center justify-between px-3">
-                                <i data-lucide="file-text" class="h-4 w-4 text-blue-500"></i>
-                                <button class="del-btn p-1 text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">${doc.title || "Untitled"}</div>
-                    `;
-                    el.addEventListener('click', (e) => {
-                        if (!e.target.closest('.del-btn')) openDocument(docSnap.id);
+                            <div class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">${doc.title || "Untitled"}</div>
+                        `;
+                        el.addEventListener('click', (e) => {
+                            if (!e.target.closest('.del-btn')) openDocument(docSnap.id);
+                        });
+                        el.querySelector('.del-btn').addEventListener('click', async (e) => {
+                             e.stopPropagation();
+                             if(confirm('Delete?')) await deleteDoc(docSnap.ref);
+                        });
+                        grid.appendChild(el);
                     });
-                    el.querySelector('.del-btn').addEventListener('click', async (e) => {
-                         e.stopPropagation();
-                         if(confirm('Delete?')) await deleteDoc(docSnap.ref);
-                    });
-                    grid.appendChild(el);
+                    lucide.createIcons();
+                }, (err) => {
+                    console.warn("DB Error:", err);
+                    dbErrorMsg.classList.remove('hidden');
                 });
-                lucide.createIcons();
-            });
+            } catch (e) {
+                console.error("Query Error", e);
+                dbErrorMsg.classList.remove('hidden');
+            }
         }
 
         document.getElementById('create-new-doc-btn').addEventListener('click', async () => {
-            const ref = await addDoc(collection(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents"), {
-                title: "Untitled Document", content: "", updatedAt: serverTimestamp()
-            });
-            openDocument(ref.id);
+            try {
+                const ref = await addDoc(collection(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents"), {
+                    title: "Untitled Document", content: "", updatedAt: serverTimestamp()
+                });
+                openDocument(ref.id);
+            } catch (e) {
+                // Fallback for test mode if write fails
+                openDocument('local-test-doc');
+            }
         });
 
         // --- Editor Logic (PAGINATION) ---
-        
-        // Helper to create a new page element
         function createPageElement() {
             const page = document.createElement('div');
             page.className = 'page';
             page.contentEditable = true;
             page.spellcheck = false;
-            // Listen for input to check overflow
             page.addEventListener('input', checkPagination);
-            // Listen for focus to track active page
-            page.addEventListener('focus', () => {
-                updateStats(); // Also update stats on focus
-            });
+            page.addEventListener('focus', () => updateStats());
             return page;
         }
 
         async function openDocument(id) {
             currentDocId = id;
             showScreen('editor');
-            pagesContainer.innerHTML = ''; // Clear existing
+            pagesContainer.innerHTML = ''; 
             
-            const snap = await getDoc(doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", id));
-            
-            if (snap.exists()) {
-                document.getElementById('doc-title-input').value = snap.data().title || "Untitled";
-                // If we saved HTML content previously, it might be one big string.
-                // We need to parse it or load it into the first page.
-                // For simplified "Solid State" loading:
-                let content = snap.data().content || "";
-                if (!content) {
-                     const p1 = createPageElement();
-                     pagesContainer.appendChild(p1);
-                     p1.focus();
+            try {
+                const docRef = doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", id);
+                const snap = await getDoc(docRef);
+                
+                if (snap.exists()) {
+                    document.getElementById('doc-title-input').value = snap.data().title || "Untitled";
+                    let content = snap.data().content || "";
+                    if (!content) {
+                         const p1 = createPageElement();
+                         pagesContainer.appendChild(p1);
+                         p1.focus();
+                    } else {
+                         const p1 = createPageElement();
+                         p1.innerHTML = content;
+                         pagesContainer.appendChild(p1);
+                         setTimeout(() => checkPagination({ target: p1 }), 100);
+                    }
                 } else {
-                     // Basic strategy: Put all content in page 1, then run pagination logic
-                     const p1 = createPageElement();
-                     p1.innerHTML = content;
-                     pagesContainer.appendChild(p1);
-                     // Run pagination to spread content
-                     setTimeout(() => checkPagination({ target: p1 }), 100);
+                    throw new Error("Doc not found");
                 }
-            } else {
+            } catch (e) {
+                console.warn("Failed to load doc (using local blank):", e);
                 const p1 = createPageElement();
                 pagesContainer.appendChild(p1);
                 p1.focus();
@@ -511,38 +520,30 @@
             updateStats();
         }
 
-        // --- The Core Pagination Function ---
         function checkPagination(e) {
             const page = e.target;
-            
-            // Check if this page is overflowing
             if (page.scrollHeight > page.clientHeight) {
-                // Determine next sibling
                 let nextPage = page.nextElementSibling;
                 if (!nextPage || !nextPage.classList.contains('page')) {
                     nextPage = createPageElement();
                     page.parentNode.insertBefore(nextPage, page.nextSibling);
                 }
-
-                // Move content to next page
-                // Strategy: Move last child until it fits
                 while (page.scrollHeight > page.clientHeight && page.lastChild) {
                     nextPage.prepend(page.lastChild);
                 }
-                
-                // If cursor was in the moved content, we lose focus.
-                // In a robust app, we'd need complex cursor tracking. 
-                // For this version, we ensure structure integrity first.
-                
-                // Recursively check next page in case IT overflows now
                 checkPagination({ target: nextPage });
             }
-            
-            // Check if we can merge back? (Optional, skipping for stability)
-            
             updateStats();
             triggerSave();
         }
+
+        // WORKSPACE CLICK HANDLER FIX
+        document.getElementById('editor-workspace').addEventListener('click', (e) => {
+            if (e.target.id === 'editor-workspace' || e.target.id === 'pages-container') {
+                const lastPage = pagesContainer.lastElementChild;
+                if (lastPage) lastPage.focus();
+            }
+        });
 
         document.getElementById('back-to-dash').addEventListener('click', () => { saveDocument(); showScreen('dashboard'); });
         document.getElementById('doc-title-input').addEventListener('input', triggerSave);
@@ -555,42 +556,31 @@
 
         async function saveDocument() {
             if (!currentUser || !currentDocId) return;
-            
-            // Gather all content from all pages
-            // We save it as one HTML blob for simplicity, but when loading we might need to split again.
-            // Or better: Save innerHTML of pagesContainer? No, keep it clean.
-            // Let's concatenate the innerHTML of all pages.
             let fullContent = "";
-            document.querySelectorAll('.page').forEach(p => {
-                fullContent += p.innerHTML; 
-                // Maybe add a delimiter? HTML flow usually handles it.
-            });
+            document.querySelectorAll('.page').forEach(p => fullContent += p.innerHTML);
 
-            await setDoc(doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", currentDocId), {
-                title: document.getElementById('doc-title-input').value,
-                content: fullContent, // Saving concatenated content
-                updatedAt: serverTimestamp()
-            }, { merge: true });
-            document.getElementById('save-status').textContent = "Saved";
+            try {
+                await setDoc(doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", currentDocId), {
+                    title: document.getElementById('doc-title-input').value,
+                    content: fullContent,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+                document.getElementById('save-status').textContent = "Saved";
+            } catch (e) {
+                document.getElementById('save-status').textContent = "Save Error (Test Mode)";
+            }
         }
 
-        // --- Tools ---
         window.execCmd = (cmd, val) => {
             document.execCommand(cmd, false, val);
-            // After command, check pagination
             const activePage = document.activeElement;
-            if (activePage && activePage.classList.contains('page')) {
-                checkPagination({ target: activePage });
-            }
+            if (activePage && activePage.classList.contains('page')) checkPagination({ target: activePage });
         };
 
-        window.handlePrint = () => {
-            window.print();
-        };
+        window.handlePrint = () => window.print();
 
         window.adjustZoom = (delta) => {
             zoom = Math.max(50, Math.min(200, zoom + delta));
-            // Apply scale to pages container
             pagesContainer.style.transform = `scale(${zoom/100})`;
             pagesContainer.style.transformOrigin = "top center";
             document.getElementById('zoom-level').textContent = zoom + "%";
@@ -600,29 +590,23 @@
              const sel = window.getSelection();
              if (!sel.rangeCount) return;
              let node = sel.getRangeAt(0).commonAncestorContainer;
-             while(node && node.nodeName !== 'P' && node.nodeName !== 'DIV' && !node.classList?.contains('page')) {
-                 node = node.parentNode;
-             }
+             while(node && node.nodeName !== 'P' && node.nodeName !== 'DIV' && !node.classList?.contains('page')) node = node.parentNode;
              if(node && !node.classList.contains('page')) {
                  node.style.paddingLeft = node.style.paddingLeft ? '' : '2em';
                  node.style.textIndent = node.style.textIndent ? '' : '-2em';
-             } else {
-                 document.execCommand('formatBlock', false, 'p');
-             }
+             } else document.execCommand('formatBlock', false, 'p');
         };
 
         function updateStats() {
             let totalWords = 0;
-            const pages = document.querySelectorAll('.page');
-            pages.forEach(p => {
+            document.querySelectorAll('.page').forEach(p => {
                 const txt = p.innerText || "";
                 totalWords += (txt.trim() ? txt.trim().split(/\s+/).length : 0);
             });
             document.getElementById('word-count').textContent = totalWords + " words";
-            document.getElementById('page-count').textContent = pages.length + " Page(s)";
+            document.getElementById('page-count').textContent = document.querySelectorAll('.page').length + " Page(s)";
         }
 
-        // Theme Toggle
         const toggleTheme = () => {
             document.documentElement.classList.toggle('dark');
             localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
@@ -630,13 +614,8 @@
         document.getElementById('theme-toggle-dash').onclick = toggleTheme;
         document.getElementById('theme-toggle-editor').onclick = toggleTheme;
         
-        // Menu building
         const menu = document.getElementById('menu-bar');
-        const items = [
-            { label: "File", action: () => alert("Use buttons in header") },
-            { label: "Edit", action: () => {} },
-            { label: "View", action: () => {} }
-        ];
+        const items = [{ label: "File", action: () => alert("Use buttons in header") }, { label: "Edit", action: () => {} }, { label: "View", action: () => {} }];
         items.forEach(i => {
             const btn = document.createElement('button');
             btn.textContent = i.label;
