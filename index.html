@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ashton Docs Professional</title>
+    <title>Lumina Docs Professional</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -76,28 +76,33 @@
                 height: auto !important;
                 overflow: visible !important;
             }
-            #app, #loading-screen, #auth-screen, header, footer, .toolbar { 
+            
+            /* Hide the main app container */
+            #app, #loading-screen, #auth-screen { 
                 display: none !important; 
             }
             
-            /* Reset container for print */
-            #editor-workspace, #pages-container {
-                display: block !important;
-                background: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                overflow: visible !important;
-                height: auto !important;
+            /* Show the print target */
+            #print-target { 
+                display: block !important; 
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                margin: 0; 
+                padding: 0; 
             }
 
+            /* Styling for printed pages */
             .page {
                 box-shadow: none !important;
                 margin: 0 !important;
                 page-break-after: always;
                 border: none !important;
-                /* Ensure exact A4 mapping */
                 width: 210mm !important;
                 height: 297mm !important;
+                /* Reset transform for print */
+                transform: none !important;
             }
             
             .page:empty {
@@ -126,6 +131,9 @@
     </style>
 </head>
 <body class="bg-[#F0F2F5] text-gray-800 font-sans h-screen overflow-hidden transition-colors duration-200 dark:bg-gray-950 dark:text-gray-100">
+
+    <!-- DEDICATED PRINT TARGET (Outside App) -->
+    <div id="print-target" class="hidden"></div>
 
     <!-- MAIN APP -->
     <div id="app" class="h-full flex flex-col">
@@ -253,7 +261,7 @@
                     </div>
                 </div>
                 <!-- Menu Bar -->
-                <div class="flex gap-4 text-sm text-gray-600 dark:text-gray-300 pl-10" id="menu-bar"></div>
+                <div class="flex gap-4 text-sm text-gray-600 dark:text-gray-300 pl-10 pt-1" id="menu-bar"></div>
             </header>
 
             <!-- Toolbar -->
@@ -337,6 +345,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+            buildMenu();
         });
 
         function showScreen(name) {
@@ -370,7 +379,7 @@
             e.preventDefault();
             isRegistering = !isRegistering;
             document.getElementById('auth-title').textContent = isRegistering ? 'Create Account' : 'Welcome Back';
-            document.getElementById('auth-subtitle').textContent = isRegistering ? 'Get started with Ashton Docs for free.' : 'Enter your details to access your workspace.';
+            document.getElementById('auth-subtitle').textContent = isRegistering ? 'Get started with Lumina Docs for free.' : 'Enter your details to access your workspace.';
             document.getElementById('auth-submit-btn').textContent = isRegistering ? 'Sign Up' : 'Sign In';
             e.target.textContent = isRegistering ? 'Sign in' : 'Sign up';
             document.getElementById('auth-footer-text').textContent = isRegistering ? 'Already have an account?' : "Don't have an account?";
@@ -503,6 +512,9 @@
                          pagesContainer.appendChild(p1);
                          p1.focus();
                     } else {
+                         // Content likely is concatenated HTML of pages. 
+                         // For true separation we would need structured data, but sticking to HTML blob:
+                         // Simple approach: Dump content into first page, let pagination split it.
                          const p1 = createPageElement();
                          p1.innerHTML = content;
                          pagesContainer.appendChild(p1);
@@ -567,7 +579,7 @@
                 }, { merge: true });
                 document.getElementById('save-status').textContent = "Saved";
             } catch (e) {
-                document.getElementById('save-status').textContent = "Save Error (Test Mode)";
+                document.getElementById('save-status').textContent = "Save Error";
             }
         }
 
@@ -577,7 +589,23 @@
             if (activePage && activePage.classList.contains('page')) checkPagination({ target: activePage });
         };
 
-        window.handlePrint = () => window.print();
+        // --- NEW PRINT LOGIC (Clone to dedicated target) ---
+        window.handlePrint = () => {
+            const printTarget = document.getElementById('print-target');
+            printTarget.innerHTML = ''; // Clear previous
+            
+            // Clone each page visually
+            document.querySelectorAll('.page').forEach(page => {
+                const clone = page.cloneNode(true);
+                clone.removeAttribute('contenteditable'); // Make static
+                printTarget.appendChild(clone);
+            });
+            
+            window.print();
+            
+            // Cleanup unnecessary, hidden anyway, but good practice
+            printTarget.innerHTML = '';
+        };
 
         window.adjustZoom = (delta) => {
             zoom = Math.max(50, Math.min(200, zoom + delta));
@@ -614,14 +642,79 @@
         document.getElementById('theme-toggle-dash').onclick = toggleTheme;
         document.getElementById('theme-toggle-editor').onclick = toggleTheme;
         
-        const menu = document.getElementById('menu-bar');
-        const items = [{ label: "File", action: () => alert("Use buttons in header") }, { label: "Edit", action: () => {} }, { label: "View", action: () => {} }];
-        items.forEach(i => {
-            const btn = document.createElement('button');
-            btn.textContent = i.label;
-            btn.className = "hover:text-black dark:hover:text-white";
-            menu.appendChild(btn);
-        });
+        // --- FUNCTIONAL MENU BUILDER ---
+        function buildMenu() {
+            const menuBar = document.getElementById('menu-bar');
+            menuBar.innerHTML = ''; // Clear existing
+
+            const createDoc = async () => { document.getElementById('create-new-doc-btn').click(); };
+            const backToDash = () => document.getElementById('back-to-dash').click();
+
+            const menuStructure = {
+                "File": [
+                    { label: "New Document", action: createDoc },
+                    { label: "Save", action: saveDocument },
+                    { label: "Print", action: window.handlePrint },
+                    { label: "Export HTML", action: () => {
+                        let html = `<html><head><title>${document.getElementById('doc-title-input').value}</title></head><body>`;
+                        document.querySelectorAll('.page').forEach(p => html += p.innerHTML);
+                        html += '</body></html>';
+                        const blob = new Blob([html], {type: 'text/html'});
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = document.getElementById('doc-title-input').value + ".html";
+                        a.click();
+                    }},
+                    { label: "Exit to Dashboard", action: backToDash }
+                ],
+                "Edit": [
+                    { label: "Undo", action: () => execCmd('undo') },
+                    { label: "Redo", action: () => execCmd('redo') },
+                    { label: "Select All", action: () => execCmd('selectAll') }
+                ],
+                "Insert": [
+                    { label: "Image (URL)", action: () => {
+                        const url = prompt("Enter Image URL:", "https://via.placeholder.com/300");
+                        if(url) execCmd('insertImage', url);
+                    }},
+                    { label: "Date", action: () => execCmd('insertText', new Date().toLocaleDateString()) },
+                    { label: "Horizontal Line", action: () => execCmd('insertHorizontalRule') }
+                ],
+                "View": [
+                    { label: "Zoom In (+)", action: () => adjustZoom(10) },
+                    { label: "Zoom Out (-)", action: () => adjustZoom(-10) },
+                    { label: "Reset Zoom", action: () => { zoom = 100; adjustZoom(0); } }
+                ]
+            };
+
+            Object.keys(menuStructure).forEach(menuName => {
+                const container = document.createElement('div');
+                container.className = "relative group inline-block";
+                
+                const btn = document.createElement('button');
+                btn.textContent = menuName;
+                btn.className = "px-3 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium";
+                
+                const dropdown = document.createElement('div');
+                dropdown.className = "hidden group-hover:block absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50";
+                
+                menuStructure[menuName].forEach(item => {
+                    const itemBtn = document.createElement('button');
+                    itemBtn.className = "block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600";
+                    itemBtn.textContent = item.label;
+                    itemBtn.onclick = (e) => {
+                        e.stopPropagation(); // Prevent closing immediately (though CSS handles hover)
+                        item.action();
+                        // Hide logic implicitly handled by hover CSS, but for click we might want to focus editor
+                    };
+                    dropdown.appendChild(itemBtn);
+                });
+
+                container.appendChild(btn);
+                container.appendChild(dropdown);
+                menuBar.appendChild(container);
+            });
+        }
 
     </script>
 </body>
