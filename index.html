@@ -3,495 +3,774 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProEdit - Online Word Processor</title>
+    <title>Lumina Docs Professional</title>
     
-    <!-- PDF Generation Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            750: '#2d3748',
+                            850: '#1a202c',
+                            950: '#0d1117',
+                        }
+                    },
+                    boxShadow: {
+                        'paper': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg-app: #f3f4f6;
-            --bg-toolbar: #ffffff;
-            --border: #e5e7eb;
-            --text: #1f2937;
-            --page-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        * {
-            box-sizing: border-box;
-            outline: none;
-        }
-
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-app);
-            color: var(--text);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* --- Toolbar --- */
-        #toolbar-container {
-            background: var(--bg-toolbar);
-            border-bottom: 1px solid var(--border);
-            padding: 10px 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            z-index: 10;
-        }
-
-        .toolbar-group {
-            display: flex;
-            gap: 4px;
-            padding-right: 12px;
-            margin-right: 12px;
-            border-right: 1px solid var(--border);
-            align-items: center;
-        }
-
-        .toolbar-group:last-child {
-            border-right: none;
-            margin-left: auto; /* Push export to right */
-        }
-
-        button {
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 4px;
-            padding: 6px 10px;
-            cursor: pointer;
-            color: #4b5563;
-            font-size: 14px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        button:hover {
-            background-color: #f3f4f6;
-            color: var(--primary);
-        }
-
-        button.active {
-            background-color: #e0e7ff;
-            color: var(--primary);
-            border-color: #c7d2fe;
-        }
-
-        select {
-            padding: 6px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            color: #4b5563;
-            background: white;
-            cursor: pointer;
-        }
-
-        input[type="color"] {
-            width: 30px;
-            height: 30px;
-            padding: 0;
-            border: none;
-            background: none;
-            cursor: pointer;
-        }
-
-        /* --- Editor Area --- */
-        #editor-workspace {
-            flex: 1;
-            overflow-y: auto;
-            padding: 40px 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        #document-page {
-            background: white;
-            width: 210mm; /* A4 Width */
-            min-height: 297mm; /* A4 Height */
-            padding: 25.4mm; /* Standard 1 inch margins */
-            box-shadow: var(--page-shadow);
-            margin-bottom: 40px;
-            cursor: text;
-            font-size: 11pt;
-            line-height: 1.5;
-            position: relative;
-        }
-
-        /* Print Specific Styles */
-        @media print {
-            body {
-                background: white;
-                height: auto;
-                overflow: visible;
-            }
-            #toolbar-container, #status-bar {
-                display: none;
-            }
-            #editor-workspace {
-                padding: 0;
-                overflow: visible;
-                display: block;
-            }
-            #document-page {
-                width: 100%;
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
-                min-height: auto;
-            }
-        }
-
-        /* Document internal styles */
-        #document-page img {
-            max-width: 100%;
-            height: auto;
-            resize: both;
-            border: 1px solid transparent;
-        }
-        #document-page img:hover {
-            border: 1px dashed #ccc;
-        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4a5568; }
+        ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
         
-        blockquote {
-            border-left: 3px solid #ccc;
-            margin-left: 0;
-            padding-left: 1em;
-            color: #666;
+        /* Hide scrollbar utility */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Print Styles */
+        @media print {
+            @page { margin: 0; size: auto; }
+            body { background: white !important; }
+            #app-container { display: none !important; }
+            #print-container { display: block !important; }
+            .print-page { margin: 0; box-shadow: none; border: none; }
         }
 
-        /* Hanging Indent Class */
-        .hanging-indent {
-            padding-left: 2em;
-            text-indent: -2em;
+        /* Editor Styles */
+        [contenteditable]:focus { outline: none; }
+        [contenteditable] { font-family: 'Times New Roman', serif; }
+        [contenteditable] h1 { font-family: 'Arial', sans-serif; font-size: 24pt; font-weight: 700; margin: 12pt 0; line-height: 1.2; }
+        [contenteditable] h2 { font-family: 'Arial', sans-serif; font-size: 18pt; font-weight: 700; margin: 18pt 0 12pt 0; }
+        [contenteditable] p { margin-bottom: 12pt; line-height: 1.5; }
+        [contenteditable] ul { list-style-type: disc; padding-left: 24pt; margin-bottom: 12pt; }
+        [contenteditable] ol { list-style-type: decimal; padding-left: 24pt; margin-bottom: 12pt; }
+        [contenteditable] blockquote { border-left: 3px solid #3b82f6; padding-left: 16pt; color: #4b5563; font-style: italic; background: #f8fafc; padding: 12pt; margin-bottom: 12pt; }
+        
+        /* Loading Spinner Animation */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 24px;
+            height: 24px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
         }
-
-        /* --- Status Bar --- */
-        #status-bar {
-            background: var(--bg-toolbar);
-            border-top: 1px solid var(--border);
-            padding: 5px 20px;
-            font-size: 12px;
-            color: #6b7280;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        /* --- Modal (for Image URL) --- */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-        .modal {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            width: 300px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .modal h3 { margin-top: 0; }
-        .modal input {
-            width: 100%;
-            padding: 8px;
-            margin: 10px 0;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-        }
-        .modal-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            border: none;
-        }
-        .btn-primary:hover {
-            background: #1d4ed8;
-        }
-
-        /* Toast Notification */
-        #toast {
-            position: fixed;
-            bottom: 40px;
-            right: 20px;
-            background: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
+<body class="bg-[#F8F9FA] text-gray-800 font-sans h-screen overflow-hidden transition-colors duration-200 dark:bg-gray-950 dark:text-gray-100">
 
-    <!-- Toolbar -->
-    <div id="toolbar-container">
+    <!-- Print Container (Only visible during print) -->
+    <div id="print-container" style="display: none;"></div>
+
+    <!-- Main App Container -->
+    <div id="app" class="h-full flex flex-col">
         
-        <div class="toolbar-group">
-            <select onchange="formatDoc('formatBlock', this.value); this.value='Normal';">
-                <option value="" selected disabled>Style</option>
-                <option value="p">Normal</option>
-                <option value="h1">Heading 1</option>
-                <option value="h2">Heading 2</option>
-                <option value="h3">Heading 3</option>
-            </select>
-            <select onchange="formatDoc('fontName', this.value); this.value='Font';">
-                <option value="" selected disabled>Font</option>
-                <option value="Arial">Arial</option>
-                <option value="Courier New">Courier New</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Verdana">Verdana</option>
-                <option value="Segoe UI">Segoe UI</option>
-            </select>
-            <select onchange="formatDoc('fontSize', this.value); this.value='Size';">
-                <option value="" selected disabled>Size</option>
-                <option value="1">Small</option>
-                <option value="3">Normal</option>
-                <option value="5">Large</option>
-                <option value="7">Huge</option>
-            </select>
-        </div>
-
-        <div class="toolbar-group">
-            <button onclick="formatDoc('bold')" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button>
-            <button onclick="formatDoc('italic')" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button>
-            <button onclick="formatDoc('underline')" title="Underline (Ctrl+U)"><i class="fas fa-underline"></i></button>
-            <button onclick="formatDoc('strikeThrough')" title="Strikethrough"><i class="fas fa-strikethrough"></i></button>
-            <input type="color" onchange="formatDoc('foreColor', this.value)" title="Text Color">
-        </div>
-
-        <div class="toolbar-group">
-            <button onclick="formatDoc('justifyLeft')" title="Align Left"><i class="fas fa-align-left"></i></button>
-            <button onclick="formatDoc('justifyCenter')" title="Align Center"><i class="fas fa-align-center"></i></button>
-            <button onclick="formatDoc('justifyRight')" title="Align Right"><i class="fas fa-align-right"></i></button>
-            <button onclick="formatDoc('justifyFull')" title="Justify"><i class="fas fa-align-justify"></i></button>
-        </div>
-
-        <div class="toolbar-group">
-            <button onclick="formatDoc('insertUnorderedList')" title="Bullet List"><i class="fas fa-list-ul"></i></button>
-            <button onclick="formatDoc('insertOrderedList')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
-            <button onclick="formatDoc('outdent')" title="Decrease Indent"><i class="fas fa-outdent"></i></button>
-            <button onclick="formatDoc('indent')" title="Increase Indent"><i class="fas fa-indent"></i></button>
-            <button onclick="toggleHangingIndent()" title="Hanging Indent" style="position: relative;">
-                <i class="fas fa-paragraph"></i>
-                <span style="font-size:8px; position:absolute; bottom:2px; right:2px;">HANG</span>
-            </button>
-        </div>
-
-        <div class="toolbar-group">
-            <button onclick="showImageModal()" title="Insert Image"><i class="fas fa-image"></i></button>
-            <button onclick="addLink()" title="Insert Link"><i class="fas fa-link"></i></button>
-            <button onclick="formatDoc('removeFormat')" title="Clear Formatting"><i class="fas fa-eraser"></i></button>
-        </div>
-
-        <div class="toolbar-group">
-            <button onclick="exportToPDF()" class="btn-primary" style="background-color: #2563eb; color: white;">
-                <i class="fas fa-file-pdf" style="margin-right: 6px;"></i> Export PDF
-            </button>
-        </div>
-    </div>
-
-    <!-- Editor Workspace -->
-    <div id="editor-workspace" onclick="focusEditor(event)">
-        <div id="document-page" contenteditable="true" spellcheck="false">
-            <p><b>Welcome to ProEdit!</b></p>
-            <p>Start typing your document here. This is a fully functional editor.</p>
-            <p>Features include:</p>
-            <ul>
-                <li>Rich text formatting (Bold, Italic, Fonts)</li>
-                <li>Alignment and lists</li>
-                <li><span style="color: red;">Color formatting</span></li>
-                <li>Images and links</li>
-            </ul>
-            <p class="hanging-indent"><b>Hanging Indent:</b> This paragraph demonstrates a hanging indent. Notice how the first line starts at the margin, but all subsequent lines in the paragraph are indented. This is commonly used in bibliographies and reference lists.</p>
-        </div>
-    </div>
-
-    <!-- Status Bar -->
-    <div id="status-bar">
-        <span id="word-count">Words: 0 | Characters: 0</span>
-        <span id="save-status">Saved</span>
-    </div>
-
-    <!-- Modals -->
-    <div id="image-modal" class="modal-overlay">
-        <div class="modal">
-            <h3>Insert Image</h3>
-            <input type="text" id="img-url" placeholder="Paste image URL here...">
-            <div class="modal-buttons">
-                <button onclick="closeModal('image-modal')">Cancel</button>
-                <button class="btn-primary" onclick="insertImage()">Insert</button>
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900 z-50">
+            <div class="flex flex-col items-center">
+                <div class="loader mb-4"></div>
+                <h2 class="text-xl font-bold text-gray-700 dark:text-gray-200">Lumina Docs</h2>
             </div>
         </div>
+
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="hidden h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+            <div class="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden transition-colors">
+                <div class="bg-blue-600 p-6 text-center">
+                    <i data-lucide="file-text" class="text-white mx-auto h-12 w-12 mb-2"></i>
+                    <h1 class="text-2xl font-bold text-white">Lumina Docs</h1>
+                    <p class="text-blue-100">Sign in to access your workspace</p>
+                </div>
+                <div class="p-8">
+                    <div id="auth-error" class="hidden mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg border border-red-100 dark:border-red-800"></div>
+                    
+                    <form id="auth-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                            <div class="relative">
+                                <i data-lucide="mail" class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"></i>
+                                <input type="email" id="email" required class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white outline-none transition-all" placeholder="you@example.com">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                            <div class="relative">
+                                <i data-lucide="lock" class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"></i>
+                                <input type="password" id="password" required class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white outline-none transition-all" placeholder="••••••••">
+                            </div>
+                        </div>
+                        <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md flex items-center justify-center gap-2">
+                            Sign In
+                        </button>
+                    </form>
+
+                    <div class="mt-6">
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300 dark:border-gray-600"></div></div>
+                            <div class="relative flex justify-center text-sm"><span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span></div>
+                        </div>
+                        <button id="google-auth-btn" class="mt-4 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-white py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium flex items-center justify-center gap-2">
+                            <span class="font-bold text-blue-500">G</span> Google
+                        </button>
+                    </div>
+                    <div class="mt-6 text-center">
+                        <button id="toggle-auth-mode" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Don't have an account? Sign up</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen" class="hidden flex-col h-full overflow-y-auto bg-[#F8F9FA] dark:bg-gray-950 transition-colors">
+            <!-- Navbar -->
+            <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-20 px-6 py-3 flex items-center justify-between shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 p-2 rounded-lg shadow-blue-200/50 shadow-md">
+                        <i data-lucide="file-text" class="text-white h-6 w-6"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-800 dark:text-white tracking-tight">Lumina Docs</span>
+                </div>
+                
+                <div class="flex-1 max-w-2xl mx-8 relative hidden md:block">
+                    <i data-lucide="search" class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"></i>
+                    <input type="text" id="doc-search" placeholder="Search documents..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm">
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button id="theme-toggle-dash" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors">
+                        <i data-lucide="moon" class="h-5 w-5 hidden dark:block"></i>
+                        <i data-lucide="sun" class="h-5 w-5 block dark:hidden"></i>
+                    </button>
+                    <div class="flex flex-col items-end hidden sm:flex">
+                        <span id="user-email-display" class="text-sm font-medium text-gray-700 dark:text-gray-300">user@example.com</span>
+                        <button id="sign-out-btn" class="text-xs text-red-500 hover:text-red-700 font-medium hover:underline">Sign Out</button>
+                    </div>
+                    <div id="user-avatar" class="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md cursor-pointer select-none">U</div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 max-w-7xl mx-auto w-full p-6 md:p-8">
+                <!-- Templates -->
+                <div class="mb-10">
+                    <h2 class="text-gray-800 dark:text-gray-200 text-lg font-semibold mb-4">Start a new document</h2>
+                    <div class="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+                        <div id="create-new-doc-btn" class="group relative flex-shrink-0 cursor-pointer">
+                            <div class="w-36 h-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm group-hover:shadow-md group-hover:border-blue-400 transition-all flex items-center justify-center relative overflow-hidden">
+                                <i data-lucide="plus" class="text-blue-500 h-10 w-10 group-hover:scale-110 transition-transform duration-300"></i>
+                            </div>
+                            <h3 class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300 ml-1 group-hover:text-blue-500">Blank Document</h3>
+                        </div>
+                        <!-- Mock Templates -->
+                        <div class="group relative flex-shrink-0 opacity-60 hover:opacity-100 cursor-not-allowed transition-opacity">
+                             <div class="w-36 h-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex flex-col p-3 gap-2">
+                                 <div class="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                                 <div class="h-1 w-full bg-gray-100 dark:bg-gray-700 rounded mt-2"></div>
+                             </div>
+                             <h3 class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">Resume (Coming Soon)</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Docs -->
+                <div>
+                    <h2 class="text-gray-800 dark:text-gray-200 text-lg font-semibold mb-6">Recent documents</h2>
+                    <div id="docs-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        <!-- Docs injected here via JS -->
+                    </div>
+                    <div id="no-docs-msg" class="hidden flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-full mb-4">
+                            <i data-lucide="file" class="text-gray-400 h-10 w-10"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">No documents found</h3>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1">Create a new document to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor Screen -->
+        <div id="editor-screen" class="hidden flex-col h-screen bg-[#F8F9FA] dark:bg-gray-950 transition-colors">
+            
+            <!-- Header -->
+            <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-2 flex flex-col z-20 shadow-sm gap-1">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <button id="back-to-dash" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-blue-600 dark:text-blue-400">
+                            <i data-lucide="arrow-left" class="h-5 w-5"></i>
+                        </button>
+                        <div class="bg-blue-600 p-1.5 rounded-md shadow-sm">
+                            <i data-lucide="file-text" class="text-white h-5 w-5"></i>
+                        </div>
+                        <input id="doc-title-input" class="text-lg font-medium text-gray-900 dark:text-white bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 rounded px-1.5 py-0 transition-all w-64 outline-none" value="Untitled Document">
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <span id="save-status" class="text-xs flex items-center gap-1 text-gray-400 dark:text-gray-500">Saved</span>
+                        <button id="theme-toggle-editor" class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors">
+                            <i data-lucide="moon" class="h-4 w-4 hidden dark:block"></i>
+                            <i data-lucide="sun" class="h-4 w-4 block dark:hidden"></i>
+                        </button>
+                        <div id="editor-avatar" class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-sm select-none">U</div>
+                    </div>
+                </div>
+
+                <!-- Menu Bar -->
+                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300 text-sm select-none pl-11" id="menu-bar">
+                    <!-- Menus injected via JS -->
+                </div>
+            </header>
+
+            <!-- Toolbar -->
+            <div class="bg-[#EDF2FA] dark:bg-gray-900 px-4 py-2 flex items-center gap-2 overflow-x-auto border-b border-gray-300 dark:border-gray-800 z-10 no-scrollbar justify-center shadow-inner">
+                <!-- Undo/Redo/Print -->
+                <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-1 px-3">
+                    <button onclick="execCmd('undo')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Undo"><i data-lucide="undo" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('redo')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Redo"><i data-lucide="redo" class="h-4 w-4"></i></button>
+                    <button onclick="handlePrint()" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Print"><i data-lucide="printer" class="h-4 w-4"></i></button>
+                </div>
+
+                <!-- Font Control -->
+                <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-2 px-3">
+                    <select onchange="execCmd('fontName', this.value)" class="h-8 px-2 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded focus:ring-0 cursor-pointer min-w-[100px] text-gray-700 dark:text-gray-200 font-medium outline-none">
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                    </select>
+                    <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+                    <div class="relative flex items-center">
+                        <input type="number" id="font-size-input" class="h-8 w-14 px-1 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-center font-medium focus:ring-0 text-gray-700 dark:text-gray-200 outline-none" value="12">
+                        <span class="text-[10px] text-gray-400 absolute right-1 pointer-events-none">pt</span>
+                    </div>
+                </div>
+
+                <!-- Formatting -->
+                <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-0.5 px-3">
+                    <button onclick="execCmd('bold')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Bold"><i data-lucide="bold" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('italic')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Italic"><i data-lucide="italic" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('underline')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Underline"><i data-lucide="underline" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('strikeThrough')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Strike"><i data-lucide="strikethrough" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('backColor', 'yellow')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Highlight"><i data-lucide="highlighter" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('foreColor', '#2563EB')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Text Color"><i data-lucide="type" class="h-4 w-4"></i></button>
+                </div>
+
+                <!-- Alignment -->
+                <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-0.5 px-3">
+                    <button onclick="execCmd('justifyLeft')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"><i data-lucide="align-left" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('justifyCenter')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"><i data-lucide="align-center" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('justifyRight')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"><i data-lucide="align-right" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('justifyFull')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"><i data-lucide="align-justify" class="h-4 w-4"></i></button>
+                </div>
+
+                <!-- Lists & Insert -->
+                <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-0.5 px-3">
+                    <button onclick="execCmd('insertUnorderedList')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"><i data-lucide="list" class="h-4 w-4"></i></button>
+                    <button onclick="execCmd('insertOrderedList')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"><i data-lucide="list-ordered" class="h-4 w-4"></i></button>
+                    <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                    <button onclick="handleHangingIndent()" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200" title="Hanging Indent">
+                        <div class="w-4 h-4 border-l-4 border-gray-400 pl-1 text-[8px] leading-[8px]">__<br/>____</div>
+                    </button>
+                    <button onclick="execCmd('insertImage', 'https://via.placeholder.com/300x200')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-700 dark:text-gray-200"><i data-lucide="image" class="h-4 w-4"></i></button>
+                </div>
+            </div>
+
+            <!-- Editor Workspace -->
+            <div id="editor-workspace" class="flex-1 overflow-y-auto relative flex justify-center p-8 bg-[#F0F2F5] dark:bg-gray-950 transition-colors" onclick="focusEditor()">
+                
+                <!-- Page -->
+                <div id="page-container" class="bg-white shadow-paper mx-auto transition-transform duration-200 ease-in-out relative" style="width: 210mm; min-height: 297mm; height: max-content; margin-bottom: 50px;">
+                    <div 
+                        id="editor"
+                        contenteditable="true"
+                        class="w-full h-full outline-none p-[25.4mm] cursor-text text-gray-900 leading-relaxed"
+                        style="min-height: 297mm;"
+                    ></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
+                <div class="flex items-center gap-4">
+                    <span class="hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded cursor-pointer font-medium">Page 1</span>
+                    <div class="w-px h-3 bg-gray-300 dark:bg-gray-700"></div>
+                    <span id="word-count" class="hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded cursor-pointer">0 words</span>
+                    <span id="char-count" class="hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded cursor-pointer">0 characters</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-gray-400">English (US)</span>
+                    <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+                        <button onclick="adjustZoom(-10)" class="hover:bg-white dark:hover:bg-gray-700 p-1 rounded shadow-sm transition-all"><i data-lucide="zoom-out" class="h-3 w-3"></i></button>
+                        <span id="zoom-level" class="w-8 text-center select-none font-medium text-gray-700 dark:text-gray-200">100%</span>
+                        <button onclick="adjustZoom(10)" class="hover:bg-white dark:hover:bg-gray-700 p-1 rounded shadow-sm transition-all"><i data-lucide="zoom-in" class="h-3 w-3"></i></button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
     </div>
 
-    <!-- Toast -->
-    <div id="toast">Message</div>
+    <!-- Firebase Logic & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, addDoc, collection, onSnapshot, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    <script>
-        const editor = document.getElementById('document-page');
-        const wordCountDisplay = document.getElementById('word-count');
-        const saveStatusDisplay = document.getElementById('save-status');
+        // --- Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyArGlY4bpWQMhQr8K1lbC1PhMA0xr60coY",
+            authDomain: "word-1265d.firebaseapp.com",
+            projectId: "word-1265d",
+            storageBucket: "word-1265d.firebasestorage.app",
+            messagingSenderId: "867413584123",
+            appId: "1:867413584123:web:11a9f96f651c42d30ba85e",
+            measurementId: "G-4V9EZLHYZ8"
+        };
 
-        // --- Core Formatting ---
-        function formatDoc(cmd, value = null) {
-            if (value) {
-                document.execCommand(cmd, false, value);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Global State ---
+        let currentUser = null;
+        let currentDocId = null;
+        let zoom = 100;
+        let savedSelection = null;
+        let saveTimeout = null;
+
+        // --- DOM Elements ---
+        const screens = {
+            loading: document.getElementById('loading-screen'),
+            auth: document.getElementById('auth-screen'),
+            dashboard: document.getElementById('dashboard-screen'),
+            editor: document.getElementById('editor-screen')
+        };
+        const editor = document.getElementById('editor');
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            
+            // Check for saved theme
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
             } else {
-                document.execCommand(cmd);
+                document.documentElement.classList.remove('dark');
             }
-            editor.focus();
+        });
+
+        // --- Navigation ---
+        function showScreen(name) {
+            Object.values(screens).forEach(el => el.classList.add('hidden'));
+            Object.values(screens).forEach(el => el.classList.remove('flex'));
+            screens[name].classList.remove('hidden');
+            screens[name].classList.add('flex');
+            lucide.createIcons();
+        }
+
+        // --- Auth Logic ---
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            screens.loading.classList.add('hidden');
+            if (user) {
+                document.getElementById('user-email-display').textContent = user.email;
+                document.getElementById('user-avatar').textContent = user.email[0].toUpperCase();
+                document.getElementById('editor-avatar').textContent = user.email[0].toUpperCase();
+                loadDashboard();
+                showScreen('dashboard');
+            } else {
+                showScreen('auth');
+            }
+        });
+
+        const authForm = document.getElementById('auth-form');
+        let isRegistering = false;
+
+        document.getElementById('toggle-auth-mode').addEventListener('click', (e) => {
+            e.preventDefault();
+            isRegistering = !isRegistering;
+            document.getElementById('auth-submit-btn').textContent = isRegistering ? 'Create Account' : 'Sign In';
+            e.target.textContent = isRegistering ? 'Already have an account? Sign in' : "Don't have an account? Sign up";
+        });
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('auth-error');
+            
+            try {
+                if (isRegistering) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message.replace('Firebase: ', '');
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('google-auth-btn').addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error(error);
+            }
+        });
+
+        document.getElementById('sign-out-btn').addEventListener('click', () => signOut(auth));
+
+        // --- Dashboard Logic ---
+        function loadDashboard() {
+            if (!currentUser) return;
+            const docsGrid = document.getElementById('docs-grid');
+            const noDocsMsg = document.getElementById('no-docs-msg');
+            const searchInput = document.getElementById('doc-search');
+            let allDocs = [];
+
+            const q = query(
+                collection(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents"),
+                orderBy("updatedAt", "desc")
+            );
+
+            onSnapshot(q, (snapshot) => {
+                allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderDocs(allDocs);
+            });
+
+            function renderDocs(docs) {
+                docsGrid.innerHTML = '';
+                if (docs.length === 0) {
+                    docsGrid.classList.add('hidden');
+                    noDocsMsg.classList.remove('hidden');
+                    noDocsMsg.classList.add('flex');
+                } else {
+                    docsGrid.classList.remove('hidden');
+                    noDocsMsg.classList.add('hidden');
+                    noDocsMsg.classList.remove('flex');
+                    
+                    docs.forEach(doc => {
+                        const date = doc.updatedAt ? doc.updatedAt.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Just now';
+                        const el = document.createElement('div');
+                        el.className = 'group cursor-pointer flex flex-col';
+                        el.innerHTML = `
+                            <div class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg h-64 mb-3 shadow-sm group-hover:shadow-md group-hover:border-blue-300 transition-all overflow-hidden flex flex-col">
+                                <div class="flex-1 p-5 overflow-hidden relative">
+                                    <div class="space-y-3 opacity-30 group-hover:opacity-50 transition-opacity">
+                                        <div class="h-2 bg-gray-400 dark:bg-gray-500 rounded w-3/4 mb-4"></div>
+                                        <div class="h-1.5 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
+                                        <div class="h-1.5 bg-gray-300 dark:bg-gray-600 rounded w-5/6"></div>
+                                        <div class="h-1.5 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
+                                        <div class="h-1.5 bg-gray-300 dark:bg-gray-600 rounded w-4/5"></div>
+                                    </div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-gray-800 via-transparent to-transparent opacity-40"></div>
+                                </div>
+                                <div class="h-12 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between px-3">
+                                    <div class="p-1 bg-blue-100 dark:bg-blue-900 rounded text-blue-600 dark:text-blue-300"><i data-lucide="file-text" class="h-3 w-3"></i></div>
+                                    <button class="delete-btn p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-full transition-colors opacity-0 group-hover:opacity-100" data-id="${doc.id}">
+                                        <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="px-1">
+                                <h3 class="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">${doc.title || "Untitled Document"}</h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate">Opened ${date}</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Click handler for opening (prevent delete click)
+                        el.addEventListener('click', (e) => {
+                            if (!e.target.closest('.delete-btn')) {
+                                openDocument(doc.id);
+                            }
+                        });
+                        
+                        // Delete handler
+                        el.querySelector('.delete-btn').addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            if(confirm('Delete this document?')) {
+                                await deleteDoc(doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", doc.id));
+                            }
+                        });
+
+                        docsGrid.appendChild(el);
+                    });
+                    lucide.createIcons();
+                }
+            }
+
+            // Search Logic
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = allDocs.filter(d => (d.title || "").toLowerCase().includes(term));
+                renderDocs(filtered);
+            });
+        }
+
+        document.getElementById('create-new-doc-btn').addEventListener('click', async () => {
+            if (!currentUser) return;
+            try {
+                const newDoc = await addDoc(collection(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents"), {
+                    title: "Untitled Document",
+                    content: "<h1>New Document</h1><p><br></p>",
+                    updatedAt: serverTimestamp(),
+                    wordCount: 0
+                });
+                openDocument(newDoc.id);
+            } catch (e) {
+                console.error(e);
+            }
+        });
+
+        // --- Editor Logic ---
+        
+        async function openDocument(docId) {
+            currentDocId = docId;
+            showScreen('editor');
+            const docRef = doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", docId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('doc-title-input').value = data.title || "Untitled Document";
+                editor.innerHTML = data.content || "";
+            } else {
+                editor.innerHTML = "";
+            }
             updateStats();
         }
 
-        function addLink() {
-            const url = prompt('Enter the URL');
-            if (url) {
-                document.execCommand('createLink', false, url);
+        document.getElementById('back-to-dash').addEventListener('click', () => {
+            saveDocument();
+            showScreen('dashboard');
+            currentDocId = null;
+        });
+
+        document.getElementById('doc-title-input').addEventListener('input', triggerSave);
+        editor.addEventListener('input', () => {
+            updateStats();
+            triggerSave();
+        });
+
+        // Save selection on mouseup/keyup to restore after button clicks
+        document.addEventListener('selectionchange', () => {
+            if (document.activeElement === editor) {
+                const sel = window.getSelection();
+                if (sel.rangeCount > 0) {
+                    savedSelection = sel.getRangeAt(0);
+                }
+            }
+        });
+
+        function triggerSave() {
+            document.getElementById('save-status').textContent = "Saving...";
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveDocument, 1000);
+        }
+
+        async function saveDocument() {
+            if (!currentUser || !currentDocId) return;
+            const content = editor.innerHTML;
+            const title = document.getElementById('doc-title-input').value;
+            const plainText = editor.innerText;
+            
+            try {
+                await setDoc(doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", currentDocId), {
+                    title: title,
+                    content: content,
+                    updatedAt: serverTimestamp(),
+                    wordCount: plainText.trim() === "" ? 0 : plainText.trim().split(/\s+/).length
+                }, { merge: true });
+                document.getElementById('save-status').textContent = "Saved";
+            } catch (e) {
+                document.getElementById('save-status').textContent = "Error saving";
             }
         }
 
-        // --- Hanging Indent Logic ---
-        function toggleHangingIndent() {
+        function updateStats() {
+            const text = editor.innerText || "";
+            document.getElementById('word-count').textContent = `${text.trim() === "" ? 0 : text.trim().split(/\s+/).length} words`;
+            document.getElementById('char-count').textContent = `${text.length} characters`;
+        }
+
+        // --- Editor Commands ---
+        window.execCmd = (command, value = null) => {
+            editor.focus();
+            if (savedSelection) {
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(savedSelection);
+            }
+            document.execCommand(command, false, value);
+            updateStats();
+            triggerSave();
+        };
+
+        window.handleHangingIndent = () => {
+            editor.focus();
+            if (savedSelection) {
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(savedSelection);
+            }
+            
             const selection = window.getSelection();
             if (!selection.rangeCount) return;
-
-            let node = selection.anchorNode;
+            const range = selection.getRangeAt(0);
+            let node = range.commonAncestorContainer;
             
-            // Traverse up to find the block element (P, DIV, LI)
-            while (node && node !== editor && node.nodeName !== 'P' && node.nodeName !== 'DIV' && node.nodeName !== 'LI') {
+            while (node && node !== editor) {
+                if (node.nodeType === 1 && ['P', 'DIV', 'H1', 'LI'].includes(node.tagName)) break;
                 node = node.parentNode;
             }
 
             if (node && node !== editor) {
-                if (node.classList.contains('hanging-indent')) {
-                    node.classList.remove('hanging-indent');
+                if (node.style.textIndent === '-2em') {
+                    node.style.textIndent = '';
+                    node.style.paddingLeft = '';
                 } else {
-                    node.classList.add('hanging-indent');
+                    node.style.textIndent = '-2em';
+                    node.style.paddingLeft = '2em';
                 }
+                triggerSave();
             } else {
-                // If we are on a text node directly inside editor or empty line, wrap it
                 document.execCommand('formatBlock', false, 'p');
-                setTimeout(toggleHangingIndent, 0); // Retry after wrapping
             }
-            updateStats();
-        }
+        };
 
-        // --- Image Handling ---
-        function showImageModal() {
-            document.getElementById('image-modal').style.display = 'flex';
-            document.getElementById('img-url').focus();
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-        }
-
-        function insertImage() {
-            const url = document.getElementById('img-url').value;
-            if (url) {
-                document.execCommand('insertImage', false, url);
-                closeModal('image-modal');
-                document.getElementById('img-url').value = '';
+        // Custom Font Size Logic
+        const fontSizeInput = document.getElementById('font-size-input');
+        fontSizeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFontSize(fontSizeInput.value);
             }
-        }
-
-        // --- Stats & Autosave ---
-        editor.addEventListener('input', () => {
-            updateStats();
-            debouncedSave();
         });
+        fontSizeInput.addEventListener('blur', () => applyFontSize(fontSizeInput.value));
 
-        // Load saved content
-        window.addEventListener('load', () => {
-            const savedContent = localStorage.getItem('proedit-content');
-            if (savedContent) {
-                editor.innerHTML = savedContent;
+        function applyFontSize(size) {
+            editor.focus();
+            if (savedSelection) {
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(savedSelection);
             }
-            updateStats();
-        });
-
-        function updateStats() {
-            const text = editor.innerText || '';
-            const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-            const chars = text.length;
-            wordCountDisplay.textContent = `Words: ${words} | Characters: ${chars}`;
-            saveStatusDisplay.textContent = 'Unsaved changes...';
+            
+            // Marker trick
+            const id = "fs-" + Date.now();
+            document.execCommand('fontName', false, id);
+            const fonts = editor.querySelectorAll(`font[face="${id}"]`);
+            fonts.forEach(f => {
+                f.removeAttribute('face');
+                f.style.fontSize = size + "pt";
+            });
+            const spans = editor.querySelectorAll(`span[style*="${id}"]`);
+            spans.forEach(s => {
+                s.style.fontFamily = "";
+                s.style.fontSize = size + "pt";
+            });
+            triggerSave();
         }
 
-        let saveTimeout;
-        function debouncedSave() {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                localStorage.setItem('proedit-content', editor.innerHTML);
-                saveStatusDisplay.textContent = 'Saved to local storage';
-            }, 1000);
-        }
+        window.adjustZoom = (amount) => {
+            zoom = Math.max(50, Math.min(200, zoom + amount));
+            document.getElementById('page-container').style.transform = `scale(${zoom / 100})`;
+            document.getElementById('zoom-level').textContent = zoom + "%";
+        };
 
-        function focusEditor(e) {
-            if (e.target.id === 'editor-workspace') {
+        window.focusEditor = () => {
+            if (document.activeElement !== fontSizeInput) {
                 editor.focus();
             }
-        }
+        };
 
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.style.opacity = 1;
-            setTimeout(() => toast.style.opacity = 0, 3000);
-        }
+        window.handlePrint = () => {
+            const printContainer = document.getElementById('print-container');
+            printContainer.innerHTML = editor.innerHTML;
+            window.print();
+        };
 
-        // --- PDF Export ---
-        function exportToPDF() {
-            showToast("Generating PDF...");
-            
-            const element = document.getElementById('document-page');
-            
-            // Options for html2pdf
-            const opt = {
-                margin:       [0.5, 0.5, 0.5, 0.5], // inches
-                filename:     'document.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true }, // scale 2 for better resolution
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-
-            // Promise based usage
-            html2pdf().set(opt).from(element).save().then(() => {
-                showToast("PDF Downloaded!");
-            }).catch(err => {
-                console.error(err);
-                showToast("Error generating PDF");
-            });
-        }
-
-        // Keyboard Shortcuts
-        editor.addEventListener('keydown', (e) => {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+        // --- Theme Toggle ---
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
             }
+        }
+        document.getElementById('theme-toggle-dash').addEventListener('click', toggleTheme);
+        document.getElementById('theme-toggle-editor').addEventListener('click', toggleTheme);
+
+        // --- Dropdown Menu Logic (Simplified) ---
+        const menuBar = document.getElementById('menu-bar');
+        const menus = {
+            File: [
+                { label: 'New', action: () => document.getElementById('create-new-doc-btn').click() },
+                { label: 'Save', action: saveDocument },
+                { label: 'Print', action: window.handlePrint },
+                { label: 'Export HTML', action: () => {
+                    const blob = new Blob([`<html><body>${editor.innerHTML}</body></html>`], {type: 'text/html'});
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = document.getElementById('doc-title-input').value + ".html";
+                    a.click();
+                }}
+            ],
+            Edit: [
+                { label: 'Undo', action: () => execCmd('undo') },
+                { label: 'Redo', action: () => execCmd('redo') },
+                { label: 'Select All', action: () => execCmd('selectAll') }
+            ],
+            Insert: [
+                { label: 'Image', action: () => execCmd('insertImage', 'https://via.placeholder.com/300') },
+                { label: 'Date', action: () => execCmd('insertText', new Date().toLocaleDateString()) }
+            ]
+        };
+
+        Object.keys(menus).forEach(key => {
+            const container = document.createElement('div');
+            container.className = 'relative group';
+            const btn = document.createElement('button');
+            btn.className = 'px-3 py-1 text-sm rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors';
+            btn.textContent = key;
+            
+            const dropdown = document.createElement('div');
+            dropdown.className = 'hidden group-hover:block absolute top-full left-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50';
+            
+            menus[key].forEach(item => {
+                const itemBtn = document.createElement('button');
+                itemBtn.className = 'w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-blue-400';
+                itemBtn.textContent = item.label;
+                itemBtn.onclick = () => { item.action(); };
+                dropdown.appendChild(itemBtn);
+            });
+            
+            container.appendChild(btn);
+            container.appendChild(dropdown);
+            menuBar.appendChild(container);
         });
 
     </script>
