@@ -57,10 +57,15 @@
             background-color: white;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             margin-bottom: 20px; /* Visual gap between pages */
-            overflow: hidden; /* Content flows to next page via JS */
+            overflow: hidden; 
             outline: none;
             position: relative;
             cursor: text;
+            /* Default Font Styles for APA Baseline */
+            font-family: 'Times New Roman', serif;
+            font-size: 12pt;
+            color: black;
+            line-height: 2.0; /* Default double spacing for APA logic, though user can change */
         }
 
         /* --- PRINT ENGINE --- */
@@ -110,11 +115,10 @@
             }
         }
 
-        /* Editor Typography */
-        .page { font-family: 'Times New Roman', serif; color: black; font-size: 12pt; }
+        /* Editor Typography Defaults (Overridden by inline styles usually) */
         .page h1 { font-family: 'Arial', sans-serif; font-size: 24pt; font-weight: 700; margin: 12pt 0; line-height: 1.2; }
         .page h2 { font-family: 'Arial', sans-serif; font-size: 18pt; font-weight: 700; margin: 18pt 0 12pt 0; }
-        .page p { margin-bottom: 12pt; line-height: 1.5; }
+        .page p { margin-bottom: 0; /* APA usually has 0 margin if double spaced, or small */ }
         .page ul { list-style-type: disc; padding-left: 24pt; margin-bottom: 12pt; }
         .page ol { list-style-type: decimal; padding-left: 24pt; margin-bottom: 12pt; }
         .page blockquote { border-left: 3px solid #3b82f6; padding-left: 16pt; color: #4b5563; font-style: italic; background: #f8fafc; padding: 12pt; margin-bottom: 12pt; }
@@ -271,11 +275,40 @@
                     <button onclick="execCmd('redo')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"><i data-lucide="redo" class="h-4 w-4"></i></button>
                     <button onclick="handlePrint()" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-blue-600"><i data-lucide="printer" class="h-4 w-4"></i></button>
                 </div>
+                
+                <!-- Font & Spacing -->
+                <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-2 px-3">
+                    <!-- APA Button -->
+                    <button onclick="setAPAMode()" class="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-blue-100">APA</button>
+                    <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+                    
+                    <select onchange="execCmd('fontName', this.value)" class="h-8 px-2 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded focus:ring-0 cursor-pointer min-w-[100px] text-gray-700 dark:text-gray-200 font-medium outline-none">
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                    </select>
+                    
+                    <div class="relative flex items-center">
+                        <input type="number" id="font-size-input" class="h-8 w-14 px-1 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded text-center font-medium focus:ring-0 text-gray-700 dark:text-gray-200 outline-none" value="12">
+                        <span class="text-[10px] text-gray-400 absolute right-1 pointer-events-none">pt</span>
+                    </div>
+
+                    <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+                    
+                    <!-- Line Height -->
+                    <select onchange="applyLineHeight(this.value)" class="h-8 px-1 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded focus:ring-0 cursor-pointer w-16 text-gray-700 dark:text-gray-200 outline-none" title="Line Spacing">
+                        <option value="1.0">1.0</option>
+                        <option value="1.15">1.15</option>
+                        <option value="1.5">1.5</option>
+                        <option value="2.0" selected>2.0</option> <!-- Default to APA expectation -->
+                    </select>
+                </div>
+
                 <div class="flex bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-1 px-3">
                     <button onclick="execCmd('bold')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"><i data-lucide="bold" class="h-4 w-4"></i></button>
                     <button onclick="execCmd('italic')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"><i data-lucide="italic" class="h-4 w-4"></i></button>
                     <button onclick="execCmd('underline')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"><i data-lucide="underline" class="h-4 w-4"></i></button>
-                    <button onclick="execCmd('strikeThrough')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"><i data-lucide="strikethrough" class="h-4 w-4"></i></button>
                 </div>
                 <div class="flex bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-1 px-3">
                      <button onclick="execCmd('justifyLeft')" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"><i data-lucide="align-left" class="h-4 w-4"></i></button>
@@ -316,7 +349,7 @@
 
         // *** API KEY ***
         const firebaseConfig = {
-            apiKey: "AIzaSyArGlY4bpWQMhQr8K1lbC1PhMA0xr60coY",
+            apiKey: "YOUR_API_KEY_HERE",
             authDomain: "word-1265d.firebaseapp.com",
             projectId: "word-1265d",
             storageBucket: "word-1265d.firebasestorage.app",
@@ -333,6 +366,7 @@
         let currentDocId = null;
         let zoom = 100;
         let saveTimeout = null;
+        let savedSelection = null; // Store selection for font application
 
         const pagesContainer = document.getElementById('pages-container');
         const screens = {
@@ -490,9 +524,36 @@
             page.className = 'page';
             page.contentEditable = true;
             page.spellcheck = false;
-            page.addEventListener('input', checkPagination);
+            // Debounced input handler for heavy tasks like pagination
+            page.addEventListener('input', (e) => {
+                triggerSave();
+                // We don't want to check pagination on every single character if pasting huge text
+                // But for normal typing we do.
+                if(e.inputType !== 'insertFromPaste') {
+                    checkPagination({ target: page });
+                }
+            });
+            
+            // Paste handler to clean junk and handle heavy text
+            page.addEventListener('paste', handlePaste);
+            
             page.addEventListener('focus', () => updateStats());
             return page;
+        }
+
+        function handlePaste(e) {
+            e.preventDefault();
+            // Get plain text (sanitizing HTML junk)
+            let text = (e.clipboardData || window.clipboardData).getData('text');
+            
+            // Basic insert command (safe)
+            document.execCommand('insertText', false, text);
+            
+            // Trigger pagination with a slight delay to allow DOM to settle
+            // Use setTimeout to yield so browser renders the paste first
+            setTimeout(() => {
+                checkPagination({ target: document.activeElement });
+            }, 10);
         }
 
         async function openDocument(id) {
@@ -512,12 +573,10 @@
                          pagesContainer.appendChild(p1);
                          p1.focus();
                     } else {
-                         // Content likely is concatenated HTML of pages. 
-                         // For true separation we would need structured data, but sticking to HTML blob:
-                         // Simple approach: Dump content into first page, let pagination split it.
                          const p1 = createPageElement();
                          p1.innerHTML = content;
                          pagesContainer.appendChild(p1);
+                         // Yield pagination check to prevent freezing on load
                          setTimeout(() => checkPagination({ target: p1 }), 100);
                     }
                 } else {
@@ -532,21 +591,46 @@
             updateStats();
         }
 
+        // --- ANTI-FREEZE PAGINATION ---
+        // Uses async recursion (setTimeout) to break long loops
         function checkPagination(e) {
             const page = e.target;
+            if (!page || !page.classList.contains('page')) return;
+
             if (page.scrollHeight > page.clientHeight) {
                 let nextPage = page.nextElementSibling;
                 if (!nextPage || !nextPage.classList.contains('page')) {
                     nextPage = createPageElement();
                     page.parentNode.insertBefore(nextPage, page.nextSibling);
                 }
+
+                // Move nodes until it fits or we hit a chunk limit
+                // Moves chunks of content to the next page
+                let moves = 0;
+                const CHUNK_LIMIT = 50; // Prevent UI freeze
+
                 while (page.scrollHeight > page.clientHeight && page.lastChild) {
+                    if (moves > CHUNK_LIMIT) {
+                        // Pause and continue in next frame
+                        setTimeout(() => checkPagination({ target: page }), 0);
+                        return;
+                    }
+                    
+                    // Prevent moving a single huge text node that will never fit
+                    if (page.childNodes.length === 1 && page.lastChild.nodeType === 3) {
+                        // It's a text node that is too big. We really should split it, but that's complex.
+                        // For now, break to avoid infinite loop.
+                        break; 
+                    }
+                    
                     nextPage.prepend(page.lastChild);
+                    moves++;
                 }
-                checkPagination({ target: nextPage });
+                
+                // Recursively check next page (async to keep UI responsive)
+                setTimeout(() => checkPagination({ target: nextPage }), 0);
             }
             updateStats();
-            triggerSave();
         }
 
         // WORKSPACE CLICK HANDLER FIX
@@ -589,6 +673,63 @@
             if (activePage && activePage.classList.contains('page')) checkPagination({ target: activePage });
         };
 
+        // --- APA HELPERS ---
+        window.setAPAMode = () => {
+            window.execCmd('fontName', 'Times New Roman');
+            applyFontSize(12);
+            window.applyLineHeight('2.0');
+            // Force save to ensure styles persist
+            triggerSave();
+        };
+
+        window.applyLineHeight = (val) => {
+            const sel = window.getSelection();
+            if(!sel.rangeCount) return;
+            
+            // Loop through selected blocks and apply style
+            // Note: execCommand doesn't support line-height. We must do manual DOM manip or use blocks.
+            // Simplified approach: Wrap in P if not and apply style
+            const node = sel.getRangeAt(0).commonAncestorContainer;
+            let parent = node.nodeType === 1 ? node : node.parentNode;
+            
+            // Find parent block
+            while(parent && !['P','DIV','LI','H1','H2'].includes(parent.tagName) && !parent.classList.contains('page')) {
+                parent = parent.parentNode;
+            }
+            
+            if(parent && parent.classList.contains('page')) {
+                // We are at root, need to wrap content or apply to page default
+                // document.execCommand('formatBlock', false, 'P');
+                // Re-get
+            } else if (parent) {
+                parent.style.lineHeight = val;
+            }
+            triggerSave();
+        };
+
+        // Custom Font Size Logic
+        const fontSizeInput = document.getElementById('font-size-input');
+        fontSizeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFontSize(fontSizeInput.value);
+            }
+        });
+        fontSizeInput.addEventListener('blur', () => applyFontSize(fontSizeInput.value));
+
+        function applyFontSize(size) {
+            document.execCommand('fontSize', false, "7"); // Default huge
+            // Get font elements and fix them
+            const fontElements = document.getElementsByTagName("font");
+            for (let i = 0; i < fontElements.length; i++) {
+                if (fontElements[i].size == "7") {
+                    fontElements[i].removeAttribute("size");
+                    fontElements[i].style.fontSize = size + "pt";
+                }
+            }
+            triggerSave();
+        }
+
         // --- NEW PRINT LOGIC (Clone to dedicated target) ---
         window.handlePrint = () => {
             const printTarget = document.getElementById('print-target');
@@ -602,8 +743,6 @@
             });
             
             window.print();
-            
-            // Cleanup unnecessary, hidden anyway, but good practice
             printTarget.innerHTML = '';
         };
 
@@ -703,9 +842,8 @@
                     itemBtn.className = "block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600";
                     itemBtn.textContent = item.label;
                     itemBtn.onclick = (e) => {
-                        e.stopPropagation(); // Prevent closing immediately (though CSS handles hover)
+                        e.stopPropagation(); 
                         item.action();
-                        // Hide logic implicitly handled by hover CSS, but for click we might want to focus editor
                     };
                     dropdown.appendChild(itemBtn);
                 });
