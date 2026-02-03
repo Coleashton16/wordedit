@@ -41,47 +41,86 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* --- VISUAL PAGINATION MAGIC --- */
-        #editor {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 25.4mm;
-            background-color: white;
-            background-image: linear-gradient(to bottom, white 0%, white calc(297mm - 10px), #d1d5db calc(297mm - 10px), #d1d5db 297mm);
-            background-size: 100% 297mm;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            margin: 0 auto;
-            outline: none;
-            overflow: hidden;
+        /* --- PAGE STYLES --- */
+        #pages-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 50px;
         }
 
-        .dark #editor {
-             background-image: linear-gradient(to bottom, white 0%, white calc(297mm - 10px), #4b5563 calc(297mm - 10px), #4b5563 297mm);
+        .page {
+            width: 210mm;
+            height: 297mm; /* Fixed A4 Height */
+            padding: 25.4mm; /* 1 inch margins */
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-bottom: 20px; /* Visual gap between pages */
+            overflow: hidden; /* Content flows to next page via JS */
+            outline: none;
+            position: relative;
+        }
+
+        /* Dark mode for pages - keep them white for contrast like Word, or dim them? 
+           User usually wants "paper" to look like paper. keeping white. */
+        
+        /* Focus styles for the active page */
+        .page:focus {
+            /* Optional: subtle ring to show which page is active */
+            /* ring: 2px solid blue; */
         }
 
         /* --- PRINT ENGINE --- */
         @media print {
-            @page { size: A4; margin: 0; }
-            body { background: white !important; margin: 0 !important; padding: 0 !important; }
-            #app, #loading-screen, #auth-screen, header, footer, .toolbar { display: none !important; }
-            #print-container { 
-                display: block !important; 
-                position: absolute; top: 0; left: 0; width: 100%; margin: 0; padding: 0;
+            @page { 
+                size: A4; 
+                margin: 0; 
             }
-            #print-content {
-                width: 210mm; min-height: 297mm; padding: 25.4mm; margin: 0 auto;
-                font-family: 'Times New Roman', serif; font-size: 12pt; color: black; background: white;
+            body { 
+                background: white !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                height: auto !important;
+                overflow: visible !important;
             }
-            img { max-width: 100% !important; }
+            #app, #loading-screen, #auth-screen, header, footer, .toolbar { 
+                display: none !important; 
+            }
+            
+            /* Reset container for print */
+            #editor-workspace, #pages-container {
+                display: block !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                height: auto !important;
+            }
+
+            .page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                page-break-after: always;
+                border: none !important;
+                /* Ensure exact A4 mapping */
+                width: 210mm !important;
+                height: 297mm !important;
+            }
+            
+            /* Hide the last empty page if it's empty? */
+            .page:empty {
+                display: none;
+            }
         }
 
-        [contenteditable] { font-family: 'Times New Roman', serif; color: black; }
-        [contenteditable] h1 { font-family: 'Arial', sans-serif; font-size: 24pt; font-weight: 700; margin: 12pt 0; line-height: 1.2; }
-        [contenteditable] h2 { font-family: 'Arial', sans-serif; font-size: 18pt; font-weight: 700; margin: 18pt 0 12pt 0; }
-        [contenteditable] p { margin-bottom: 12pt; line-height: 1.5; }
-        [contenteditable] ul { list-style-type: disc; padding-left: 24pt; margin-bottom: 12pt; }
-        [contenteditable] ol { list-style-type: decimal; padding-left: 24pt; margin-bottom: 12pt; }
-        [contenteditable] blockquote { border-left: 3px solid #3b82f6; padding-left: 16pt; color: #4b5563; font-style: italic; background: #f8fafc; padding: 12pt; margin-bottom: 12pt; }
+        /* Editor Typography */
+        .page { font-family: 'Times New Roman', serif; color: black; font-size: 12pt; }
+        .page h1 { font-family: 'Arial', sans-serif; font-size: 24pt; font-weight: 700; margin: 12pt 0; line-height: 1.2; }
+        .page h2 { font-family: 'Arial', sans-serif; font-size: 18pt; font-weight: 700; margin: 18pt 0 12pt 0; }
+        .page p { margin-bottom: 12pt; line-height: 1.5; }
+        .page ul { list-style-type: disc; padding-left: 24pt; margin-bottom: 12pt; }
+        .page ol { list-style-type: decimal; padding-left: 24pt; margin-bottom: 12pt; }
+        .page blockquote { border-left: 3px solid #3b82f6; padding-left: 16pt; color: #4b5563; font-style: italic; background: #f8fafc; padding: 12pt; margin-bottom: 12pt; }
         
         .loader {
             border: 3px solid #f3f3f3;
@@ -95,11 +134,6 @@
     </style>
 </head>
 <body class="bg-[#F0F2F5] text-gray-800 font-sans h-screen overflow-hidden transition-colors duration-200 dark:bg-gray-950 dark:text-gray-100">
-
-    <!-- DEDICATED PRINT CONTAINER -->
-    <div id="print-container" style="display: none;">
-        <div id="print-content"></div>
-    </div>
 
     <!-- MAIN APP -->
     <div id="app" class="h-full flex flex-col">
@@ -170,8 +204,7 @@
                                 <div class="relative flex justify-center text-xs uppercase"><span class="px-2 bg-white dark:bg-gray-800 text-gray-400">Or continue with</span></div>
                             </div>
                             <button id="google-auth-btn" class="mt-4 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-white py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 font-medium flex items-center justify-center gap-2 transition-colors text-sm">
-                                <svg class="h-4 w-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" /><path fill="#EA4335" d="M12 4.81c1.62 0 3.09.56 4.23 1.64l3.17-3.17C17.45 1.5 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
-                                Google
+                                <span class="font-bold text-blue-500">G</span> Google
                             </button>
                         </div>
                         <div class="mt-8 text-center">
@@ -250,14 +283,17 @@
                 </div>
             </div>
 
-            <!-- Editor Workspace -->
-            <div id="editor-workspace" class="flex-1 overflow-y-auto relative flex justify-center p-8 bg-[#F0F2F5] dark:bg-gray-950 transition-colors" onclick="document.getElementById('editor').focus()">
-                <div id="editor" contenteditable="true" spellcheck="false"></div>
+            <!-- Editor Workspace (Scrolling Container) -->
+            <div id="editor-workspace" class="flex-1 overflow-y-auto relative p-8 bg-[#F0F2F5] dark:bg-gray-950 transition-colors">
+                <!-- Pages Container -->
+                <div id="pages-container">
+                    <!-- Pages will be inserted here dynamically -->
+                </div>
             </div>
 
             <!-- Footer -->
             <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-4 py-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 z-20">
-                <div class="flex gap-4"><span id="word-count">0 words</span></div>
+                <div class="flex gap-4"><span id="page-count">Page 1</span> <span id="word-count">0 words</span></div>
                 <div class="flex gap-2">
                     <button onclick="adjustZoom(-10)" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"><i data-lucide="zoom-out" class="h-3 w-3"></i></button>
                     <span id="zoom-level">100%</span>
@@ -294,7 +330,7 @@
         let saveTimeout = null;
 
         // --- DOM Elements ---
-        const editor = document.getElementById('editor');
+        const pagesContainer = document.getElementById('pages-container');
         const screens = {
             loading: document.getElementById('loading-screen'),
             auth: document.getElementById('auth-screen'),
@@ -425,36 +461,114 @@
             openDocument(ref.id);
         });
 
-        // --- Editor ---
+        // --- Editor Logic (PAGINATION) ---
+        
+        // Helper to create a new page element
+        function createPageElement() {
+            const page = document.createElement('div');
+            page.className = 'page';
+            page.contentEditable = true;
+            page.spellcheck = false;
+            // Listen for input to check overflow
+            page.addEventListener('input', checkPagination);
+            // Listen for focus to track active page
+            page.addEventListener('focus', () => {
+                updateStats(); // Also update stats on focus
+            });
+            return page;
+        }
+
         async function openDocument(id) {
             currentDocId = id;
             showScreen('editor');
+            pagesContainer.innerHTML = ''; // Clear existing
+            
             const snap = await getDoc(doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", id));
+            
             if (snap.exists()) {
-                editor.innerHTML = snap.data().content || "";
                 document.getElementById('doc-title-input').value = snap.data().title || "Untitled";
+                // If we saved HTML content previously, it might be one big string.
+                // We need to parse it or load it into the first page.
+                // For simplified "Solid State" loading:
+                let content = snap.data().content || "";
+                if (!content) {
+                     const p1 = createPageElement();
+                     pagesContainer.appendChild(p1);
+                     p1.focus();
+                } else {
+                     // Basic strategy: Put all content in page 1, then run pagination logic
+                     const p1 = createPageElement();
+                     p1.innerHTML = content;
+                     pagesContainer.appendChild(p1);
+                     // Run pagination to spread content
+                     setTimeout(() => checkPagination({ target: p1 }), 100);
+                }
+            } else {
+                const p1 = createPageElement();
+                pagesContainer.appendChild(p1);
+                p1.focus();
             }
             updateStats();
         }
 
-        document.getElementById('back-to-dash').addEventListener('click', () => { saveDocument(); showScreen('dashboard'); });
-        
-        editor.addEventListener('input', () => {
+        // --- The Core Pagination Function ---
+        function checkPagination(e) {
+            const page = e.target;
+            
+            // Check if this page is overflowing
+            if (page.scrollHeight > page.clientHeight) {
+                // Determine next sibling
+                let nextPage = page.nextElementSibling;
+                if (!nextPage || !nextPage.classList.contains('page')) {
+                    nextPage = createPageElement();
+                    page.parentNode.insertBefore(nextPage, page.nextSibling);
+                }
+
+                // Move content to next page
+                // Strategy: Move last child until it fits
+                while (page.scrollHeight > page.clientHeight && page.lastChild) {
+                    nextPage.prepend(page.lastChild);
+                }
+                
+                // If cursor was in the moved content, we lose focus.
+                // In a robust app, we'd need complex cursor tracking. 
+                // For this version, we ensure structure integrity first.
+                
+                // Recursively check next page in case IT overflows now
+                checkPagination({ target: nextPage });
+            }
+            
+            // Check if we can merge back? (Optional, skipping for stability)
+            
             updateStats();
+            triggerSave();
+        }
+
+        document.getElementById('back-to-dash').addEventListener('click', () => { saveDocument(); showScreen('dashboard'); });
+        document.getElementById('doc-title-input').addEventListener('input', triggerSave);
+
+        function triggerSave() {
             clearTimeout(saveTimeout);
             document.getElementById('save-status').textContent = "Saving...";
             saveTimeout = setTimeout(saveDocument, 1000);
-        });
-        document.getElementById('doc-title-input').addEventListener('input', () => {
-             clearTimeout(saveTimeout);
-             saveTimeout = setTimeout(saveDocument, 1000);
-        });
+        }
 
         async function saveDocument() {
             if (!currentUser || !currentDocId) return;
+            
+            // Gather all content from all pages
+            // We save it as one HTML blob for simplicity, but when loading we might need to split again.
+            // Or better: Save innerHTML of pagesContainer? No, keep it clean.
+            // Let's concatenate the innerHTML of all pages.
+            let fullContent = "";
+            document.querySelectorAll('.page').forEach(p => {
+                fullContent += p.innerHTML; 
+                // Maybe add a delimiter? HTML flow usually handles it.
+            });
+
             await setDoc(doc(db, "artifacts", "lumina-docs", "users", currentUser.uid, "documents", currentDocId), {
                 title: document.getElementById('doc-title-input').value,
-                content: editor.innerHTML,
+                content: fullContent, // Saving concatenated content
                 updatedAt: serverTimestamp()
             }, { merge: true });
             document.getElementById('save-status').textContent = "Saved";
@@ -463,30 +577,33 @@
         // --- Tools ---
         window.execCmd = (cmd, val) => {
             document.execCommand(cmd, false, val);
-            editor.focus();
+            // After command, check pagination
+            const activePage = document.activeElement;
+            if (activePage && activePage.classList.contains('page')) {
+                checkPagination({ target: activePage });
+            }
         };
 
         window.handlePrint = () => {
-            // Clean print logic: Copy pure HTML to print container
-            const printContent = document.getElementById('print-content');
-            printContent.innerHTML = editor.innerHTML;
             window.print();
         };
 
         window.adjustZoom = (delta) => {
             zoom = Math.max(50, Math.min(200, zoom + delta));
-            editor.style.transform = `scale(${zoom/100})`;
-            editor.style.transformOrigin = "top center";
+            // Apply scale to pages container
+            pagesContainer.style.transform = `scale(${zoom/100})`;
+            pagesContainer.style.transformOrigin = "top center";
             document.getElementById('zoom-level').textContent = zoom + "%";
         };
 
         window.handleHangingIndent = () => {
-             // Basic hanging indent toggle logic
              const sel = window.getSelection();
              if (!sel.rangeCount) return;
              let node = sel.getRangeAt(0).commonAncestorContainer;
-             while(node && node !== editor && node.nodeName !== 'P') node = node.parentNode;
-             if(node && node !== editor) {
+             while(node && node.nodeName !== 'P' && node.nodeName !== 'DIV' && !node.classList?.contains('page')) {
+                 node = node.parentNode;
+             }
+             if(node && !node.classList.contains('page')) {
                  node.style.paddingLeft = node.style.paddingLeft ? '' : '2em';
                  node.style.textIndent = node.style.textIndent ? '' : '-2em';
              } else {
@@ -495,8 +612,14 @@
         };
 
         function updateStats() {
-            const txt = editor.innerText || "";
-            document.getElementById('word-count').textContent = (txt.trim() ? txt.trim().split(/\s+/).length : 0) + " words";
+            let totalWords = 0;
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(p => {
+                const txt = p.innerText || "";
+                totalWords += (txt.trim() ? txt.trim().split(/\s+/).length : 0);
+            });
+            document.getElementById('word-count').textContent = totalWords + " words";
+            document.getElementById('page-count').textContent = pages.length + " Page(s)";
         }
 
         // Theme Toggle
