@@ -65,7 +65,7 @@
             font-family: 'Times New Roman', serif;
             font-size: 12pt;
             color: black;
-            line-height: 2.0; /* Default double spacing for APA logic, though user can change */
+            line-height: 1.15; /* Default to standard, APA button will change to 2.0 */
         }
 
         /* --- PRINT ENGINE --- */
@@ -279,7 +279,7 @@
                 <!-- Font & Spacing -->
                 <div class="flex items-center bg-white dark:bg-gray-800 p-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 gap-2 px-3">
                     <!-- APA Button -->
-                    <button onclick="setAPAMode()" class="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-blue-100">APA</button>
+                    <button onclick="setAPAMode()" class="text-xs font-bold text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-blue-100" title="Apply APA Formatting">APA</button>
                     <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
                     
                     <select onchange="execCmd('fontName', this.value)" class="h-8 px-2 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded focus:ring-0 cursor-pointer min-w-[100px] text-gray-700 dark:text-gray-200 font-medium outline-none">
@@ -297,11 +297,11 @@
                     <div class="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
                     
                     <!-- Line Height -->
-                    <select onchange="applyLineHeight(this.value)" class="h-8 px-1 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded focus:ring-0 cursor-pointer w-16 text-gray-700 dark:text-gray-200 outline-none" title="Line Spacing">
+                    <select onchange="applyLineHeight(this.value)" id="line-height-select" class="h-8 px-1 text-sm border-none bg-transparent hover:bg-gray-50 dark:hover:bg-gray-700 rounded focus:ring-0 cursor-pointer w-16 text-gray-700 dark:text-gray-200 outline-none" title="Line Spacing">
                         <option value="1.0">1.0</option>
-                        <option value="1.15">1.15</option>
+                        <option value="1.15" selected>1.15</option>
                         <option value="1.5">1.5</option>
-                        <option value="2.0" selected>2.0</option> <!-- Default to APA expectation -->
+                        <option value="2.0">2.0</option>
                     </select>
                 </div>
 
@@ -675,35 +675,42 @@
 
         // --- APA HELPERS ---
         window.setAPAMode = () => {
-            window.execCmd('fontName', 'Times New Roman');
-            applyFontSize(12);
-            window.applyLineHeight('2.0');
-            // Force save to ensure styles persist
+            // 1. Apply Document-Wide Styles to Pages
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(p => {
+                p.style.fontFamily = 'Times New Roman';
+                p.style.fontSize = '12pt';
+                p.style.lineHeight = '2.0';
+                p.style.color = 'black'; 
+            });
+
+            // Update Controls
+            document.getElementById('font-size-input').value = 12;
+            const lhSelect = document.getElementById('line-height-select');
+            if(lhSelect) lhSelect.value = "2.0";
+            
+            // Re-check pagination because text size changed
+            if (pages.length > 0) checkPagination({ target: pages[0] });
+
             triggerSave();
+            
+            // Notify user
+            const status = document.getElementById('save-status');
+            const originalText = status.textContent;
+            status.textContent = "APA Mode Applied";
+            setTimeout(() => status.textContent = originalText, 2000);
         };
 
         window.applyLineHeight = (val) => {
-            const sel = window.getSelection();
-            if(!sel.rangeCount) return;
+            // Apply to all pages for consistency in this simple editor
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(p => {
+                p.style.lineHeight = val;
+            });
             
-            // Loop through selected blocks and apply style
-            // Note: execCommand doesn't support line-height. We must do manual DOM manip or use blocks.
-            // Simplified approach: Wrap in P if not and apply style
-            const node = sel.getRangeAt(0).commonAncestorContainer;
-            let parent = node.nodeType === 1 ? node : node.parentNode;
+            // Re-check pagination
+            if (pages.length > 0) checkPagination({ target: pages[0] });
             
-            // Find parent block
-            while(parent && !['P','DIV','LI','H1','H2'].includes(parent.tagName) && !parent.classList.contains('page')) {
-                parent = parent.parentNode;
-            }
-            
-            if(parent && parent.classList.contains('page')) {
-                // We are at root, need to wrap content or apply to page default
-                // document.execCommand('formatBlock', false, 'P');
-                // Re-get
-            } else if (parent) {
-                parent.style.lineHeight = val;
-            }
             triggerSave();
         };
 
